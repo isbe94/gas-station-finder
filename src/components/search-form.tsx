@@ -28,6 +28,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 
 export function SearchForm() {
+  const [address, setAddress] = useState('');
   // Estados para los datos de los selectores
   const [provinces, setProvinces] = useState<ApiProvince[]>([]);
   const [municipalities, setMunicipalities] = useState<ApiMunicipality[]>([]);
@@ -41,7 +42,7 @@ export function SearchForm() {
   // Estado para los resultados de la búsqueda
   const [foundStations, setFoundStations] = useState<ApiGasStation[]>([]);
   const [filteredStations, setFilteredStations] = useState<ApiGasStation[]>([]);
-  
+
   // Estados de UI
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +82,7 @@ export function SearchForm() {
       loadMunicipalities();
     }
   }, [selectedProvince]);
-  
+
   // Filtra las estaciones cuando el municipio seleccionado cambia
   useEffect(() => {
     // Si se selecciona un municipio específico (y no es 'todos')
@@ -108,14 +109,16 @@ export function SearchForm() {
     setSelectedMunicipality('');
 
     try {
-      const stationsData = await gasStationsProductsProvinces(selectedProvince, selectedProduct);
+      const fullAddress = `114, Avenida de Pablo Neruda, Portazgo, Puente de Vallecas, Madrid, Comunidad de Madrid, 28018, España`;
+      // const fullAddress = `${numberAndStreet}, ${neighborhood}, ${district}, ${city}, ${region}, ${postalCode}, ${country}`;
+      const stationsData = await gasStationsProductsProvinces(selectedProvince, selectedProduct, fullAddress);
       if (stationsData.length === 0) {
         setError('No se encontraron gasolineras con los criterios seleccionados.');
       } else {
         const sortedStations = stationsData.sort((a, b) => {
-            const priceA = parseFloat(a.PrecioProducto.replace(',', '.'));
-            const priceB = parseFloat(b.PrecioProducto.replace(',', '.'));
-            return priceA - priceB;
+          const priceA = parseFloat(a.PrecioProducto.replace(',', '.'));
+          const priceB = parseFloat(b.PrecioProducto.replace(',', '.'));
+          return priceA - priceB;
         });
         setFoundStations(sortedStations);
         setFilteredStations(sortedStations);
@@ -131,11 +134,15 @@ export function SearchForm() {
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
         <div className="md:col-span-4">
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Dirección (Opcional)</label>
-          <Input id="address" placeholder="Ej: Calle Mayor, 10, Madrid" disabled />
-          <p className="text-xs text-gray-500 mt-1">La búsqueda por dirección no está implementada. Utiliza los filtros.</p>
+          <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+          <Input
+            id="address"
+            placeholder="Ej: Calle Mayor, 10"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
         </div>
-        
+
         <div>
           <label htmlFor="province" className="block text-sm font-medium text-gray-700 mb-1">Provincia *</label>
           <Select value={selectedProvince} onValueChange={setSelectedProvince}>
@@ -167,7 +174,7 @@ export function SearchForm() {
         </div>
 
         <div>
-           <label htmlFor="product" className="block text-sm font-medium text-gray-700 mb-1">Carburante *</label>
+          <label htmlFor="product" className="block text-sm font-medium text-gray-700 mb-1">Carburante *</label>
           <Select value={selectedProduct} onValueChange={setSelectedProduct}>
             <SelectTrigger id="product"><SelectValue placeholder="Selecciona carburante" /></SelectTrigger>
             <SelectContent>
@@ -187,9 +194,9 @@ export function SearchForm() {
 
       {error && (
         <Alert variant="destructive">
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 

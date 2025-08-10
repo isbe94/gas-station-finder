@@ -1,5 +1,3 @@
-// src/components/gas-station-list.tsx
-
 import { ApiGasStation } from '@/types';
 import { GasStationCard, GasStationCardSkeleton } from './gas-station-card';
 
@@ -30,9 +28,6 @@ export function GasStationList({ stations, isLoading }: GasStationListProps) {
 
   return (
     <div>
-        <h2 className="text-2xl font-bold mb-4">
-            Resultados ({stations.length})
-        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stations.map((station) => (
             <GasStationCard key={station.IDEESS} station={station} />

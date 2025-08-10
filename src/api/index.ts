@@ -1,11 +1,17 @@
 // src/api/index.ts
-
 import axios from 'axios';
-import { ApiGasStation, ApiMunicipality, ApiPetroleumProduct, ApiProvince } from '@/types';
+import {
+  ApiGasStation,
+  ApiMunicipality,
+  ApiPetroleumProduct,
+  ApiProvince,
+} from '@/types';
+import { getCoordinatesFromAddress, haversineDistance } from '@/utils/geocode';
 
-const GAS_STATIONS_API = 'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes';
+const GAS_STATIONS_API =
+  'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes';
 
-// Interfaz para la respuesta de la API que contiene la lista de gasolineras
+// Interfaz para la respuesta de gasolineras
 interface GasStationApiResponse {
   Fecha: string;
   ListaEESSPrecio: ApiGasStation[];
@@ -13,48 +19,134 @@ interface GasStationApiResponse {
   ResultadoConsulta: string;
 }
 
+// Obtener lista de provincias
 export async function provincesList(): Promise<ApiProvince[]> {
   try {
-    const response = await axios.get<ApiProvince[]>(`${GAS_STATIONS_API}/Listados/Provincias/`);
-    // Ordenar alfabéticamente por el nombre de la provincia
-    return response.data.sort((a, b) => a.Provincia.localeCompare(b.Provincia));
+    const response = await axios.get<ApiProvince[]>(
+      `${GAS_STATIONS_API}/Listados/Provincias/`
+    );
+    return response.data.sort((a, b) =>
+      a.Provincia.localeCompare(b.Provincia)
+    );
   } catch (error) {
-    console.error("Error fetching provinces:", error);
-    throw new Error("No se pudieron cargar las provincias.");
+    console.error('Error fetching provinces:', error);
+    throw new Error('No se pudieron cargar las provincias.');
   }
 }
 
-export async function municipalitiesByProvince(provinceId: string): Promise<ApiMunicipality[]> {
+// Obtener lista de municipios según provincia
+export async function municipalitiesByProvince(
+  provinceId: string
+): Promise<ApiMunicipality[]> {
   if (!provinceId) return [];
   try {
-    const response = await axios.get<ApiMunicipality[]>(`${GAS_STATIONS_API}/Listados/MunicipiosPorProvincia/${provinceId}`);
-    // Ordenar alfabéticamente por el nombre del municipio
+    const response = await axios.get<ApiMunicipality[]>(
+      `${GAS_STATIONS_API}/Listados/MunicipiosPorProvincia/${provinceId}`
+    );
     return response.data.sort((a, b) => a.Municipio.localeCompare(b.Municipio));
   } catch (error) {
-    console.error(`Error fetching municipalities for province ${provinceId}:`, error);
-    throw new Error("No se pudieron cargar los municipios.");
+    console.error(
+      `Error fetching municipalities for province ${provinceId}:`,
+      error
+    );
+    throw new Error('No se pudieron cargar los municipios.');
   }
 }
 
+// Obtener lista de carburantes
 export async function petroleumProducts(): Promise<ApiPetroleumProduct[]> {
   try {
-    const response = await axios.get<ApiPetroleumProduct[]>(`${GAS_STATIONS_API}/Listados/ProductosPetroliferos/`);
+    const response = await axios.get<ApiPetroleumProduct[]>(
+      `${GAS_STATIONS_API}/Listados/ProductosPetroliferos/`
+    );
     return response.data;
   } catch (error) {
-    console.error("Error fetching petroleum products:", error);
-    throw new Error("No se pudieron cargar los tipos de carburante.");
+    console.error('Error fetching petroleum products:', error);
+    throw new Error('No se pudieron cargar los tipos de carburante.');
   }
 }
 
-export async function gasStationsProductsProvinces(provinceId: string, productId: string): Promise<ApiGasStation[]> {
-  if (!provinceId || !productId) return [];
+
+const MAX_DISTANCE_KM = 30;
+const MAX_RESULTS = 10;
+
+export async function gasStationsProductsProvinces(
+  provinceId: string,
+  productId: string,
+  userAddress?: string
+): Promise<(ApiGasStation & { distancia: number })[]> {
+  if (!provinceId || !productId) {
+    console.warn('No se recibió provincia o producto');
+    return [];
+  }
+
   try {
-    const response = await axios.get<GasStationApiResponse>(
+    console.log(`Buscando gasolineras para provincia ${provinceId}, producto ${productId} y direccion: ${userAddress}`);
+
+    console.log(`Buscando gasolineras para provincia ${provinceId}, producto ${productId}`);
+    const { data } = await axios.get<GasStationApiResponse>(
       `${GAS_STATIONS_API}/EstacionesTerrestres/FiltroProvinciaProducto/${provinceId}/${productId}`
     );
-    return response.data.ListaEESSPrecio;
+    console.log(`Gasolineras recibidas: ${ JSON.stringify(data.ListaEESSPrecio)}`);
+
+    let estaciones: (ApiGasStation & { distancia: number })[] =
+      data.ListaEESSPrecio.map((e) => ({
+        ...e,
+        distancia: 0,
+      }));
+
+    if (userAddress) {
+      console.log(`Calculando distancias para la dirección: ${userAddress}`);
+      const userCoords = await getCoordinatesFromAddress(userAddress);
+      console.log('User coords:', userCoords);
+      if (!userCoords || isNaN(userCoords.lat) || isNaN(userCoords.lng)) {
+        throw new Error('No se pudo obtener la ubicación del usuario.');
+      }
+
+      estaciones = estaciones
+        .filter(e => {
+          const lat = parseFloat(e['Latitud'].replace(',', '.'));
+          const lon = parseFloat(e['Longitud (WGS84)'].replace(',', '.'));
+          return !isNaN(lat) && !isNaN(lon);
+        })
+        .map((e) => {
+          const lat = parseFloat(e['Latitud'].replace(',', '.'));
+          const lon = parseFloat(e['Longitud (WGS84)'].replace(',', '.'));
+          const distancia = haversineDistance(
+            userCoords.lat,
+            userCoords.lng,
+            lat,
+            lon
+          );
+          console.log(`Distancia a estación ${e['Dirección']}: ${distancia} km`);
+          return { ...e, distancia };
+        })
+        .filter((e) => e.distancia <= MAX_DISTANCE_KM);
+
+      console.log(`Gasolineras dentro de ${MAX_DISTANCE_KM} km: ${estaciones.length}`);
+
+      estaciones = estaciones
+        .sort((a, b) => a.distancia - b.distancia)
+        .slice(0, MAX_RESULTS);
+    }
+
+    estaciones.sort((a, b) => {
+      const priceA = parseFloat(a.PrecioProducto.replace(',', '.')) || Infinity;
+      const priceB = parseFloat(b.PrecioProducto.replace(',', '.')) || Infinity;
+      return priceA - priceB;
+    });
+
+    console.log(`Gasolineras retornadas: ${estaciones.length}`);
+
+    if (estaciones.length === 0) {
+      throw new Error('No hay gasolineras que cumplan los criterios.');
+    }
+
+    return estaciones;
   } catch (error) {
-    console.error("Error fetching gas stations by province and product:", error);
-    throw new Error("No se pudieron encontrar gasolineras con los filtros seleccionados.");
+    console.error('Error fetching gas stations:', error);
+    throw error;  // Propaga el error para que React lo capture y muestre mensaje
   }
 }
+
+
