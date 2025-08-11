@@ -34,15 +34,28 @@ export async function provincesList(): Promise<ApiProvince[]> {
   }
 }
 
+
 export async function petroleumProducts(): Promise<ApiPetroleumProduct[]> {
   try {
     const response = await axios.get<ApiPetroleumProduct[]>(
       `${GAS_STATIONS_API}/Listados/ProductosPetroliferos/`
     );
-    return response.data;
+
+    const allowedProductIds = [ '1', '23', '24', '25',  '20', '3',  '21', '4', '5', '26',
+    ];
+
+    const allProducts = response.data;
+
+    // Filter the product list to only include the ones with allowed IDs.
+    const filteredProducts = allProducts.filter(product =>
+      allowedProductIds.includes(product.IDProducto)
+    );
+
+    return filteredProducts;
+
   } catch (error) {
     console.error('Error fetching petroleum products:', error);
-    throw new Error('No se pudieron cargar los tipos de carburante.');
+    throw new Error('Could not load the fuel types.');
   }
 }
 
