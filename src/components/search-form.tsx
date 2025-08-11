@@ -77,7 +77,7 @@ export function SearchForm() {
   }
 
   const handleSearch = async () => {
-    if (!selectedProvince || !selectedProduct || !address) {
+    if (!selectedProvince || !selectedMunicipality || !selectedProduct || !address || !postalCode) {
       setError("Por favor, complete todos los campos requeridos (*).")
       return
     }
@@ -216,7 +216,7 @@ export function SearchForm() {
           <Button
             type="button"
             onClick={handleSearch}
-            disabled={isLoading || !selectedProvince || !selectedMunicipality || !selectedProduct || !address || !postalCode}
+            // disabled={isLoading || !selectedProvince || !selectedMunicipality || !selectedProduct || !address || !postalCode}
             className="bg-emerald-500 w-full sm:w-auto px-8 py-2 hover:bg-emerald-500 text-white font-medium"
             size="lg"
           >
