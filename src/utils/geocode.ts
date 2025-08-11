@@ -1,18 +1,14 @@
 import axios from "axios";
+import { getDistance } from "geolib"; 
 
 // Función para calcular distancia usando Haversine
 export function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371; // Radio de la Tierra en km
-  const toRad = (value: number) => (value * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) ** 2;
-
-  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  // getDistance devuelve metros, convertimos a km
+  const distanceMeters = getDistance(
+    { latitude: lat1, longitude: lon1 },
+    { latitude: lat2, longitude: lon2 }
+  );
+  return distanceMeters / 1000;
 }
 
 // Función para geocodificar una dirección a coordenadas
