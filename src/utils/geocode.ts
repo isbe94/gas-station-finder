@@ -70,7 +70,7 @@ export async function getAddressFromCoords(lat: number, lng: number): Promise<{ 
     const data = await response.json();
 
     if (data && data.address) {
-      const { road, house_number, postcode, city, town, village } = data.address;
+      const { road, house_number, postcode } = data.address;
       // Construimos la dirección de la forma más completa posible
       const street = road || "";
       const number = house_number || "";
