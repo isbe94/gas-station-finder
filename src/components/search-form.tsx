@@ -217,7 +217,7 @@ export function SearchForm() {
             type="button"
             onClick={handleSearch}
             disabled={isLoading || !selectedProvince || !selectedMunicipality || !selectedProduct || !address || !postalCode}
-            className="bg-blue-100 w-full sm:w-auto px-8 py-2 hover:bg-blue-200 text-white font-medium"
+            className="bg-emerald-500 w-full sm:w-auto px-8 py-2 hover:bg-emerald-500 text-white font-medium"
             size="lg"
           >
             {isLoading ? "Buscando..." : "Buscar Gasolineras"}
