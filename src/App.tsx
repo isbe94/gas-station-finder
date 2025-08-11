@@ -1,5 +1,3 @@
-// src/App.tsx
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Fuel, Filter } from "lucide-react"
 import { SearchForm } from "@/components/search-form"

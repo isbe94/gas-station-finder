@@ -1,17 +1,18 @@
 // src/api/index.ts
+
 import axios from 'axios';
 import {
   ApiGasStation,
-  ApiMunicipality,
   ApiPetroleumProduct,
   ApiProvince,
 } from '@/types';
-import { getCoordinatesFromAddress, haversineDistance } from '@/utils/geocode';
+// Asegúrate de que la ruta a tus utilidades de geocodificación es correcta
+import { reverseGeocode, haversineDistance } from '@/utils/geocode';
 
 const GAS_STATIONS_API =
   'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes';
 
-// Interfaz para la respuesta de gasolineras
+// Interfaz para la respuesta de la API (sin cambios)
 interface GasStationApiResponse {
   Fecha: string;
   ListaEESSPrecio: ApiGasStation[];
@@ -19,41 +20,20 @@ interface GasStationApiResponse {
   ResultadoConsulta: string;
 }
 
-// Obtener lista de provincias
+// --- FUNCIONES AUXILIARES DE LISTADO (SIN CAMBIOS) ---
+
 export async function provincesList(): Promise<ApiProvince[]> {
   try {
     const response = await axios.get<ApiProvince[]>(
       `${GAS_STATIONS_API}/Listados/Provincias/`
     );
-    return response.data.sort((a, b) =>
-      a.Provincia.localeCompare(b.Provincia)
-    );
+    return response.data;
   } catch (error) {
     console.error('Error fetching provinces:', error);
     throw new Error('No se pudieron cargar las provincias.');
   }
 }
 
-// Obtener lista de municipios según provincia
-export async function municipalitiesByProvince(
-  provinceId: string
-): Promise<ApiMunicipality[]> {
-  if (!provinceId) return [];
-  try {
-    const response = await axios.get<ApiMunicipality[]>(
-      `${GAS_STATIONS_API}/Listados/MunicipiosPorProvincia/${provinceId}`
-    );
-    return response.data.sort((a, b) => a.Municipio.localeCompare(b.Municipio));
-  } catch (error) {
-    console.error(
-      `Error fetching municipalities for province ${provinceId}:`,
-      error
-    );
-    throw new Error('No se pudieron cargar los municipios.');
-  }
-}
-
-// Obtener lista de carburantes
 export async function petroleumProducts(): Promise<ApiPetroleumProduct[]> {
   try {
     const response = await axios.get<ApiPetroleumProduct[]>(
@@ -67,84 +47,77 @@ export async function petroleumProducts(): Promise<ApiPetroleumProduct[]> {
 }
 
 
+// --- FUNCIÓN DE BÚSQUEDA PRINCIPAL Y ÚNICA ---
+// Esta función REEMPLAZA tu antigua gasStationsProductsProvinces.
+
 const MAX_DISTANCE_KM = 30;
 const MAX_RESULTS = 10;
+type Coordinates = { lat: number; lng: number };
 
+/**
+ * Orquesta la búsqueda de gasolineras de principio a fin.
+ * El frontend solo necesita proporcionar el producto y las coordenadas.
+ * @param productId - El ID del carburante.
+ * @param userCoords - Las coordenadas del usuario.
+ * @returns Una lista de gasolineras filtrada y ordenada.
+ */
 export async function gasStationsProductsProvinces(
-  provinceId: string,
   productId: string,
-  userAddress?: string
+  userCoords: Coordinates
 ): Promise<(ApiGasStation & { distancia: number })[]> {
-  if (!provinceId || !productId) {
-    console.warn('No se recibió provincia o producto');
-    return [];
+  
+  console.log('Iniciando búsqueda en la API con productId:', productId);
+  
+  if (!productId || !userCoords) {
+    throw new Error('Se requiere un producto y las coordenadas del usuario.');
   }
 
   try {
-    console.log(`Buscando gasolineras para provincia ${provinceId}, producto ${productId}`);
+    // --- PASO 1: Determinar la provincia a partir de las coordenadas ---
+    console.log("Paso 1: Obteniendo lista de provincias...");
+    const allProvinces = await provincesList();
+    console.log("Paso 1.1: Obteniendo dirección desde coordenadas...");
+    const addressString = await reverseGeocode(userCoords.lat, userCoords.lng);
+    console.log("Paso 1.2: Dirección obtenida:", addressString);
+
+    const foundProvince = allProvinces.find(p => 
+        addressString.toUpperCase().includes(p.Provincia.toUpperCase())
+    );
+
+    if (!foundProvince) {
+      throw new Error("No se pudo determinar tu provincia desde tu ubicación.");
+    }
+    const provinceId = foundProvince.IDPovincia;
+    console.log(`Paso 2: Provincia detectada: ${foundProvince.Provincia} (ID: ${provinceId})`);
+
+    // --- PASO 2: Llamar a la API del gobierno con los datos correctos ---
+    console.log(`Paso 3: Llamando a la API para provincia ${provinceId} y producto ${productId}`);
     const { data } = await axios.get<GasStationApiResponse>(
       `${GAS_STATIONS_API}/EstacionesTerrestres/FiltroProvinciaProducto/${provinceId}/${productId}`
     );
-    // console.log(`Gasolineras recibidas: ${ JSON.stringify(data.ListaEESSPrecio)}`);
+    console.log("Paso 3.1: Datos recibidos de la API.");
 
-    let estaciones: (ApiGasStation & { distancia: number })[] =
-      data.ListaEESSPrecio.map((e) => ({
-        ...e,
-        distancia: 0,
-      }));
+    // --- PASO 3: Filtrar y ordenar los resultados ---
+    console.log(`Paso 4: Filtrando y ordenando ${data.ListaEESSPrecio.length} estaciones...`);
+    let estaciones = data.ListaEESSPrecio
+      .map((e) => {
+        const lat = parseFloat(e['Latitud'].replace(',', '.'));
+        const lon = parseFloat(e['Longitud (WGS84)'].replace(',', '.'));
+        if (isNaN(lat) || isNaN(lon)) return null;
+        const distancia = haversineDistance(userCoords.lat, userCoords.lng, lat, lon);
+        return { ...e, distancia };
+      })
+      .filter((e): e is ApiGasStation & { distancia: number } => e !== null)
+      .filter((e) => e.distancia <= MAX_DISTANCE_KM);
+    
+    estaciones.sort((a, b) => a.distancia - b.distancia);
 
-    if (userAddress) {
-      console.log(`Calculando distancias para la dirección: ${userAddress}`);
-      const userCoords = await getCoordinatesFromAddress(userAddress);
-      console.log('User coords:', userCoords);
-      if (!userCoords || isNaN(userCoords.lat) || isNaN(userCoords.lng)) {
-        throw new Error('No se pudo obtener la ubicación del usuario.');
-      }
+    console.log(`Paso 5: Proceso completado. Devolviendo ${estaciones.slice(0, MAX_RESULTS).length} estaciones.`);
+    return estaciones.slice(0, MAX_RESULTS);
 
-      estaciones = estaciones
-        .filter(e => {
-          const lat = parseFloat(e['Latitud'].replace(',', '.'));
-          const lon = parseFloat(e['Longitud (WGS84)'].replace(',', '.'));
-          return !isNaN(lat) && !isNaN(lon);
-        })
-        .map((e) => {
-          const lat = parseFloat(e['Latitud'].replace(',', '.'));
-          const lon = parseFloat(e['Longitud (WGS84)'].replace(',', '.'));
-          const distancia = haversineDistance(
-            userCoords.lat,
-            userCoords.lng,
-            lat,
-            lon
-          );
-          // console.log(`Distancia a estación ${e['Dirección']}: ${distancia} km`);
-          return { ...e, distancia };
-        })
-        .filter((e) => e.distancia <= MAX_DISTANCE_KM);
-
-      console.log(`Gasolineras dentro de ${MAX_DISTANCE_KM} km: ${estaciones.length}`);
-
-      estaciones = estaciones
-        .sort((a, b) => a.distancia - b.distancia)
-        .slice(0, MAX_RESULTS);
-    }
-
-    estaciones.sort((a, b) => {
-      const priceA = parseFloat(a.PrecioProducto.replace(',', '.')) || Infinity;
-      const priceB = parseFloat(b.PrecioProducto.replace(',', '.')) || Infinity;
-      return priceA - priceB;
-    });
-
-    console.log(`Gasolineras retornadas: ${estaciones.length}`);
-
-    if (estaciones.length === 0) {
-      throw new Error('No hay gasolineras que cumplan los criterios.');
-    }
-
-    return estaciones;
   } catch (error) {
-    console.error('Error fetching gas stations:', error);
-    throw error;  // Propaga el error para que React lo capture y muestre mensaje
+    console.error('ERROR en gasStationsProductsProvinces:', error);
+    const errorMessage = error instanceof Error ? error.message : "Un error inesperado ocurrió en la API.";
+    throw new Error(errorMessage);
   }
 }
-
-
