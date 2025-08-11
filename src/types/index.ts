@@ -69,6 +69,11 @@ export interface ApiGasStation {
   "IDCCAA": string;
 }
 
+// Se crea a partir de la funcion gasStationsProductsProvinces que calcula la distancia
+export interface ApiGasStationWithDistance extends ApiGasStation {
+  distancia: number;
+}
+
 export interface ApiProvince {
   IDPovincia: string; // Nota: La API real puede tener un typo "IDPovincia". Lo mantenemos para que coincida.
   IDCCAA: string;

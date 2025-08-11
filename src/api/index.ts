@@ -81,13 +81,11 @@ export async function gasStationsProductsProvinces(
   }
 
   try {
-    console.log(`Buscando gasolineras para provincia ${provinceId}, producto ${productId} y direccion: ${userAddress}`);
-
     console.log(`Buscando gasolineras para provincia ${provinceId}, producto ${productId}`);
     const { data } = await axios.get<GasStationApiResponse>(
       `${GAS_STATIONS_API}/EstacionesTerrestres/FiltroProvinciaProducto/${provinceId}/${productId}`
     );
-    console.log(`Gasolineras recibidas: ${ JSON.stringify(data.ListaEESSPrecio)}`);
+    // console.log(`Gasolineras recibidas: ${ JSON.stringify(data.ListaEESSPrecio)}`);
 
     let estaciones: (ApiGasStation & { distancia: number })[] =
       data.ListaEESSPrecio.map((e) => ({
@@ -118,7 +116,7 @@ export async function gasStationsProductsProvinces(
             lat,
             lon
           );
-          console.log(`Distancia a estación ${e['Dirección']}: ${distancia} km`);
+          // console.log(`Distancia a estación ${e['Dirección']}: ${distancia} km`);
           return { ...e, distancia };
         })
         .filter((e) => e.distancia <= MAX_DISTANCE_KM);
