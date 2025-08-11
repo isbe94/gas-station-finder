@@ -214,11 +214,10 @@ export function SearchForm() {
         {/* Fila 3: Botón de búsqueda */}
         <div className="flex justify-center pt-2">
           <Button
-            style={{ backgroundColor: '#10B981'}}
             type="button"
             onClick={handleSearch}
             disabled={isLoading || !selectedProvince || !selectedMunicipality || !selectedProduct || !address || !postalCode}
-            className="w-full sm:w-auto px-8 py-2 text-white font-medium"
+            className="bg-blue-100 w-full sm:w-auto px-8 py-2 hover:bg-blue-200 text-white font-medium"
             size="lg"
           >
             {isLoading ? "Buscando..." : "Buscar Gasolineras"}
