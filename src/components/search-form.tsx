@@ -214,6 +214,7 @@ export function SearchForm() {
         {/* Fila 3: Botón de búsqueda */}
         <div className="flex justify-center pt-2">
           <Button
+            type="button"
             onClick={handleSearch}
             disabled={isLoading || !selectedProvince || !selectedMunicipality || !selectedProduct || !address || !postalCode}
             className="bg-emerald-500 w-full sm:w-auto px-8 py-2 hover:bg-emerald-500 text-white font-medium"
