@@ -1,4 +1,5 @@
 import type { ApiGasStationWithDistance } from "@/types"
+import { createGoogleMapsUrl  } from "@/utils/maps"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock, MapPin, Tag } from "lucide-react"
@@ -14,9 +15,7 @@ export function GasStationCard({ station }: GasStationCardProps) {
         return isNaN(numericPrice) ? "No disponible" : `${numericPrice.toFixed(3)} €/L`
     }
 
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        `${station["Dirección"]}, ${station["C.P."]} ${station.Localidad} (${station.Provincia})`
-    )}`;
+    const mapsUrl =  createGoogleMapsUrl (station);
 
     return (
         <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block">
