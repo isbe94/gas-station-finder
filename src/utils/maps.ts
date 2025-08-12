@@ -1,25 +1,40 @@
 import type { ApiGasStationWithDistance } from "@/types";
 
 /**
- * Crea una URL de Google Maps para una estación de servicio específica.
- * Da prioridad al uso de coordenadas para la máxima precisión en móviles.
- * Si las coordenadas no son válidas, utiliza la dirección como fallback.
+ * Crea la URL de Google Maps más precisa posible combinando una categoría de negocio,
+ * una búsqueda de texto y una pista geográfica (coordenadas).
+ *
+ * Este método le dice a Google: "Busca una 'Gasolinera' con este nombre y dirección,
+ * y debería estar muy cerca de este punto geográfico", eliminando toda ambigüedad.
+ *
  * @param station - El objeto completo de la estación de servicio.
- * @returns Una URL de Google Maps como string.
+ * @returns La URL de Google Maps más robusta posible para un único resultado.
  */
 export const createGoogleMapsUrl = (station: ApiGasStationWithDistance): string => {
-    // Intenta obtener las coordenadas numéricas desde el objeto station.
+    // 1. Construir la cadena de búsqueda de texto base.
+    const baseSearchQuery = [
+        "Gasolinera",
+        station["Rótulo"],
+        station["Dirección"],
+        station["C.P."],
+        station["Provincia"]
+    ].filter(Boolean).join(', ');
+
+    // 2. Obtener las coordenadas como pista geográfica.
     const lat = parseFloat(station['Latitud'].replace(',', '.'));
     const lng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
 
-    // Si existen coordenadas válidas, se buscan.
+    let finalSearchQuery: string;
+
+    // 3. Construir la consulta final.
+    // Si tenemos coordenadas válidas, las añadimos a la cadena de búsqueda.
+    // El formato "Texto de Búsqueda @lat,lng" es el más efectivo para anclar la búsqueda.
     if (!isNaN(lat) && !isNaN(lng)) {
-        // La URL 'query=lat,lng' abre un pin exacto en el mapa.
-        return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        finalSearchQuery = `${baseSearchQuery} @${lat},${lng}`;
+    } else {
+        // Fallback: Si no hay coordenadas, usamos solo la búsqueda de texto base.
+        finalSearchQuery = baseSearchQuery;
     }
 
-    // (FALLBACK): Si no hay coordenadas, usa la dirección de texto.
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        `${station["Dirección"]}, ${station["C.P."]} ${station.Localidad} (${station.Provincia})`
-    )}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(finalSearchQuery)}`;
 };
