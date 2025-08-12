@@ -1,5 +1,3 @@
-// src/components/gas-station-card.tsx
-
 import type { ApiGasStationWithDistance } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -29,7 +27,7 @@ export function GasStationCard({ station }: GasStationCardProps) {
                             <span className="break-words leading-tight text-gray-800">{station["Rótulo"]}</span>
                             <div className="flex flex-wrap gap-2">
                                 <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
-                                    {station.distancia.toFixed(1)} km
+                                    {station.distance.toFixed(1)} km
                                 </Badge>
                                 <Badge
                                     className={station["Margen"] === "D" ? "bg-black text-white" : ""}
@@ -37,7 +35,6 @@ export function GasStationCard({ station }: GasStationCardProps) {
                                 >
                                     {station["Margen"] === "D" ? "Autopista" : "Carretera"}
                                 </Badge>
-
                             </div>
                         </div>
                     </CardTitle>
@@ -65,7 +62,6 @@ export function GasStationCard({ station }: GasStationCardProps) {
     )
 }
 
-// Componente Skeleton para la tarjeta
 export function GasStationCardSkeleton() {
     return (
         <Card className="h-full bg-white border border-gray-200">

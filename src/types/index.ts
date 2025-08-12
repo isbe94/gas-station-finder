@@ -1,5 +1,3 @@
-// src/types/index.ts
-
 export interface Coordinates {
   lat: number;
   lng: number;
@@ -71,7 +69,7 @@ export interface ApiGasStation {
 
 // Se crea a partir de la funcion gasStationsProductsProvinces que calcula la distancia
 export interface ApiGasStationWithDistance extends ApiGasStation {
-  distancia: number;
+  distance: number;
 }
 
 export interface ApiProvince {
@@ -95,3 +93,5 @@ export interface ApiPetroleumProduct {
   NombreProducto: string;
   NombreProductoAbreviatura: string;
 }
+
+export type SortByType = 'price' | 'distance';

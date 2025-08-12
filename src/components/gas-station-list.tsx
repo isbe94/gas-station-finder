@@ -2,7 +2,7 @@ import { ApiGasStation } from '@/types';
 import { GasStationCard, GasStationCardSkeleton } from './gas-station-card';
 
 interface ApiGasStationWithDistance extends ApiGasStation {
-  distancia: number;
+  distance: number;
 }
 
 interface GasStationListProps {
