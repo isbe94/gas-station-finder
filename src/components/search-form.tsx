@@ -242,33 +242,35 @@ export function SearchForm() {
         <div className="space-y-6 pt-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <h3 className="text-xl font-bold text-gray-800 shrink-0">Gasolineras Encontradas</h3>
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <div className="w-full">
-                <Select value={String(selectedDistance)} onValueChange={(value) => setSelectedDistance(Number(value))}>
-                  <SelectTrigger className="w-full bg-white">
+            <div className="flex items-center justify-center md:justify-end gap-2 w-full md:w-auto">
+              <Select value={String(selectedDistance)} onValueChange={(value) => setSelectedDistance(Number(value))}>
+                <SelectTrigger className="bg-white h-11">
+                  <div className="flex items-center gap-1">
                     <Route className="h-4 w-4 mr-2" />
                     <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {DISTANCE_OPTIONS.map(dist => <SelectItem key={dist} value={String(dist)}>{dist} km</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-full">
-                <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortByType)}>
-                  <SelectTrigger className="w-full bg-white">
-                    <ArrowDownUp className="h-4 w-4 mr-1" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {DISTANCE_OPTIONS.map(dist => <SelectItem key={dist} value={String(dist)}>{dist} km</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortByType)}>
+                <SelectTrigger className="bg-white h-11 min-w-[120px]">
+                  <div className="flex items-center gap-1">
+                    <ArrowDownUp className="h-4 w-4 mr-2" />
                     <SelectValue placeholder="Ordenar por..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="price"><DollarSign className="h-4 w-4 mr-2 inline-block" />Precio</SelectItem>
-                    <SelectItem value="distance"><Route className="h-4 w-4 mr-2 inline-block" />Distancia</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="price"><DollarSign className="h-4 w-4 mr-2 inline-block" />Precio</SelectItem>
+                  <SelectItem value="distance"><Route className="h-4 w-4 mr-2 inline-block" />Distancia</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
           <GasStationList stations={displayedStations} isLoading={isLoading} />
+
           {hasMoreStations && (
             <div className="text-center">
               <Button onClick={handleLoadMore} variant="outline" className="bg-white">

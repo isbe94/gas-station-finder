@@ -1,5 +1,5 @@
 import type { ApiGasStationWithDistance } from "@/types"
-import { createGoogleMapsUrl  } from "@/utils/maps"
+import { createGoogleMapsUrl } from "@/utils/maps"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock, MapPin, Tag } from "lucide-react"
@@ -15,23 +15,24 @@ export function GasStationCard({ station }: GasStationCardProps) {
         return isNaN(numericPrice) ? "No disponible" : `${numericPrice.toFixed(3)} €/L`
     }
 
-    const mapsUrl =  createGoogleMapsUrl (station);
+    const mapsUrl = createGoogleMapsUrl(station);
 
     return (
         <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block">
             <Card className="h-full flex flex-col justify-between hover:shadow-lg transition-all duration-200 hover:-translate-y-1 bg-white border border-gray-200 text-black">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base md:text-lg font-bold">
-                        <div className="flex flex-col gap-3">
-                            <span className="break-words leading-tight text-gray-800">{station["Rótulo"]}</span>
-                            <div className="flex flex-wrap gap-2">
-                                <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        <div className="flex flex-row justify-between items-center gap-4">
+                            <span className="break-words leading-tight text-gray-800">
+                                {station["Rótulo"]}
+                            </span>
+                            <div className="flex flex-wrap justify-end gap-2 shrink-0">
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                                     {station.distance.toFixed(1)} km
                                 </Badge>
                                 <Badge
-                                    className={station["Margen"] === "D" ? "bg-black text-white" : ""}
-                                    variant={station["Margen"] === "D" ? "default" : "secondary"}
-                                >
+                                    className={station["Margen"] === "D" ? "bg-black text-white" : "border border-black"}
+                                    variant={station["Margen"] === "D" ? "default" : "secondary"}>
                                     {station["Margen"] === "D" ? "Autopista" : "Carretera"}
                                 </Badge>
                             </div>
