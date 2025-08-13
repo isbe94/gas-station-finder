@@ -259,10 +259,10 @@ export function SearchForm() {
                 </SelectContent>
               </Select>
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortByType)}>
-                <SelectTrigger className="bg-white h-10 sm:h-11 w-full text-xs sm:text-base">
-                  <div className="flex items-center gap-1">
-                    <ArrowDownUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <SelectValue placeholder="Ordenar por..." />
+                <SelectTrigger className="bg-white h-10 sm:h-11 w-full min-w-0 text-xs sm:text-base">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <ArrowDownUp className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                    <span className="truncate">{sortBy === "price" ? "Precio" : "Distancia"}</span>
                   </div>
                 </SelectTrigger>
                 <SelectContent className="bg-white">
