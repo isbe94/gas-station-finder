@@ -240,7 +240,7 @@ export function SearchForm() {
 
       {hasSearched && !isLoading && (
         <div className="space-y-6 pt-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
             <h3 className="text-xl font-bold text-gray-800 shrink-0">Gasolineras Encontradas</h3>
             <div className="flex items-center justify-center md:justify-end gap-2 w-full md:w-auto">
               <Select value={String(selectedDistance)} onValueChange={(value) => setSelectedDistance(Number(value))}>
