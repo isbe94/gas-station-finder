@@ -255,7 +255,7 @@ export function SearchForm() {
                 </SelectContent>
               </Select>
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortByType)}>
-                <SelectTrigger className="bg-white h-11 min-w-[120px]">
+                <SelectTrigger className="bg-white h-11">
                   <div className="flex items-center gap-1">
                     <ArrowDownUp className="h-4 w-4 mr-2" />
                     <SelectValue placeholder="Ordenar por..." />
