@@ -242,28 +242,38 @@ export function SearchForm() {
         <div className="space-y-6 pt-4">
           <div className="flex flex-col md:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
             <h3 className="text-xl font-bold text-gray-800 shrink-0">Gasolineras Encontradas</h3>
-            <div className="flex items-center justify-center md:justify-end gap-2 w-full md:w-auto">
+            <div className="grid grid-cols-2 sm:flex items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <Select value={String(selectedDistance)} onValueChange={(value) => setSelectedDistance(Number(value))}>
-                <SelectTrigger className="bg-white h-11">
+                <SelectTrigger className="bg-white h-10 sm:h-11 w-full text-xs sm:text-base">
                   <div className="flex items-center gap-1">
-                    <Route className="h-4 w-4 mr-2" />
+                    <Route className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <SelectValue />
                   </div>
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  {DISTANCE_OPTIONS.map(dist => <SelectItem key={dist} value={String(dist)}>{dist} km</SelectItem>)}
+                  {DISTANCE_OPTIONS.map((dist) => (
+                    <SelectItem key={dist} value={String(dist)} className="text-sm sm:text-base">
+                      {dist} km
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortByType)}>
-                <SelectTrigger className="bg-white h-11">
+                <SelectTrigger className="bg-white h-10 sm:h-11 w-full text-xs sm:text-base">
                   <div className="flex items-center gap-1">
-                    <ArrowDownUp className="h-4 w-4 mr-2" />
+                    <ArrowDownUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <SelectValue placeholder="Ordenar por..." />
                   </div>
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="price"><DollarSign className="h-4 w-4 mr-2 inline-block" />Precio</SelectItem>
-                  <SelectItem value="distance"><Route className="h-4 w-4 mr-2 inline-block" />Distancia</SelectItem>
+                  <SelectItem value="price" className="text-sm sm:text-base">
+                    <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 inline-block" />
+                    Precio
+                  </SelectItem>
+                  <SelectItem value="distance" className="text-sm sm:text-base">
+                    <Route className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 inline-block" />
+                    Distancia
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
