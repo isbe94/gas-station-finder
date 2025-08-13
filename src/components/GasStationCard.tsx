@@ -6,10 +6,12 @@ import { Clock, MapPin, Tag } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface GasStationCardProps {
-    station: ApiGasStationWithDistance
+    station: ApiGasStationWithDistance;
+    onMouseEnter: (id: string) => void;
+    onMouseLeave: () => void;
 }
 
-export function GasStationCard({ station }: GasStationCardProps) {
+export function GasStationCard({ station, onMouseEnter, onMouseLeave }: GasStationCardProps) {
     const formatPrice = (price: string) => {
         const numericPrice = Number.parseFloat(price.replace(",", "."))
         return isNaN(numericPrice) ? "No disponible" : `${numericPrice.toFixed(3)} €/L`
@@ -17,8 +19,16 @@ export function GasStationCard({ station }: GasStationCardProps) {
 
     const mapsUrl = createGoogleMapsUrl(station);
 
+    const handleClick = () => {
+        window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+    }
+
     return (
-        <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block">
+        <div
+            className="block h-full cursor-pointer"
+            onClick={handleClick}
+            onMouseEnter={() => onMouseEnter(station.IDEESS)}
+            onMouseLeave={onMouseLeave}>
             <Card className="h-full flex flex-col justify-between hover:shadow-lg transition-all duration-200 hover:-translate-y-1 bg-white border border-gray-200 text-black">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base md:text-lg font-bold">
@@ -58,7 +68,7 @@ export function GasStationCard({ station }: GasStationCardProps) {
                     </div>
                 </CardContent>
             </Card>
-        </a>
+        </div>
     )
 }
 

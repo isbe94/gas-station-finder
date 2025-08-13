@@ -1,5 +1,5 @@
 import { ApiGasStation } from '@/types';
-import { GasStationCard, GasStationCardSkeleton } from './gas-station-card';
+import { GasStationCard, GasStationCardSkeleton } from './GasStationCard';
 
 interface ApiGasStationWithDistance extends ApiGasStation {
   distance: number;
@@ -8,9 +8,10 @@ interface ApiGasStationWithDistance extends ApiGasStation {
 interface GasStationListProps {
   stations: ApiGasStationWithDistance[];
   isLoading: boolean;
+  onStationHover: (id: string | null) => void; // para funciones de hover del mapa
 }
 
-export function GasStationList({ stations, isLoading }: GasStationListProps) {
+export function GasStationList({ stations, isLoading, onStationHover }: GasStationListProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -32,11 +33,16 @@ export function GasStationList({ stations, isLoading }: GasStationListProps) {
 
   return (
     <div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stations.map((station) => (
-            <GasStationCard key={station.IDEESS} station={station} />
+          <GasStationCard
+            key={station.IDEESS}
+            station={station}
+            onMouseEnter={() => onStationHover(station.IDEESS)}
+            onMouseLeave={() => onStationHover(null)}
+          />
         ))}
-        </div>
+      </div>
     </div>
   );
 }

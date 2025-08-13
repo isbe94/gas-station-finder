@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Fuel, Filter } from "lucide-react"
-import { SearchForm } from "@/components/search-form"
+import { SearchForm } from "@/components/SearchForm"
 
 function App() {
   return (

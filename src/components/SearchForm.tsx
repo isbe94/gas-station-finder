@@ -1,23 +1,28 @@
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react"
 import { petroleumProducts, gasStationsProductsProvinces } from "@/api/index"
-import { reverseGeocode } from "@/utils/geocode"
+import { getCurrentLocation, getCoordinatesFromAddress, reverseGeocode } from "@/utils/geocode"
 
 import type { ApiGasStationWithDistance, ApiPetroleumProduct, Coordinates, SortByType } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { GasStationList } from "./gas-station-list"
+import { GasStationList } from "./GasStationList"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MapPin, DollarSign, Route, X } from "lucide-react"
+
+const MapDisplay = lazy(() => import('@/components/MapDisplay').then(module => ({ default: module.MapDisplay })));
 
 const STATIONS_PER_PAGE = 6;
 const PREDEFINED_BRANDS = ['Repsol', 'Plenergy', 'Ballenoil', 'Petroprix'];
 const DISTANCE_OPTIONS = [10, 20, 30, 40, 50];
 
 export function SearchForm() {
+  const [searchCoords, setsearchCoords] = useState<Coordinates | null>(null) // Coordenadas finales para la búsqueda
+  const [locatedAddress, setLocatedAddress] = useState(""); // Almacena la dirección de la geolocalización
   const [address, setAddress] = useState("")
-  const [userCoords, setUserCoords] = useState<Coordinates | null>(null)
+  const [hoveredStationId, setHoveredStationId] = useState<string | null>(null);
+
   const [products, setProducts] = useState<ApiPetroleumProduct[]>([])
   const [selectedProduct, setSelectedProduct] = useState<string>("")
 
@@ -47,33 +52,31 @@ export function SearchForm() {
     loadProducts()
   }, [])
 
-  const handleLocate = async () => {
+  const handleLocate = useCallback(async () => {
     setIsLocating(true);
     setError(null);
     try {
-      if (!navigator.geolocation) throw new Error("La geolocalización no es soportada.");
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject);
-      });
-      const { latitude, longitude } = position.coords;
-      setUserCoords({ lat: latitude, lng: longitude });
-      setAddress(await reverseGeocode(latitude, longitude));
+      const coords = await getCurrentLocation();
+      setsearchCoords(coords);
+      const locatedAddr = await reverseGeocode(coords.lat, coords.lng);
+      setAddress(locatedAddr);
+      setLocatedAddress(locatedAddr); // Guarda la dirección original de la geolocalización
     } catch (err) {
-      const apiError = err instanceof Error ? err.message : "No se pudo obtener la ubicación.";
-      setError(apiError);
+      console.error(err)
+      setError("No se pudo obtener tu ubicación. Revisa los permisos.");
     } finally {
       setIsLocating(false);
     }
-  }
+  }, []);
 
   const performSearch = useCallback(async () => {
-    if (!userCoords || !selectedProduct) return;
+    if (!searchCoords || !selectedProduct) return;
     setIsLoading(true);
     setError(null);
     try {
       const stationsData = await gasStationsProductsProvinces(
         selectedProduct,
-        userCoords,
+        searchCoords,
         selectedBrands,
         sortBy,
         selectedDistance
@@ -83,18 +86,42 @@ export function SearchForm() {
       }
       setAllStations(stationsData);
     } catch (err) {
-      const apiError = err instanceof Error ? err.message : "Ocurrió un error inesperado.";
+      const apiError = err instanceof Error ? err.message : "Ocurrió un error.";
       setError(apiError);
     } finally {
       setIsLoading(false);
     }
-  }, [userCoords, selectedProduct, selectedBrands, sortBy, selectedDistance, hasSearched]);
+  }, [searchCoords, selectedProduct, selectedBrands, sortBy, selectedDistance, hasSearched]);
 
-  const handleSearchClick = () => {
+  const handleSearchClick = async () => {
     setHasSearched(true);
     setCurrentPage(1);
     setAllStations([]);
-    performSearch();
+    setError(null);
+
+    if (address && address !== locatedAddress) {
+      setIsLoading(true);
+      try {
+        const coords = await getCoordinatesFromAddress(address);
+        if (coords) {
+          setsearchCoords(coords); // Esto disparará el useEffect que llama a performSearch
+        } else {
+          setError('No se encontraron coordenadas para la dirección introducida.');
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error(err)
+        setError('Error al buscar la dirección.');
+        setIsLoading(false);
+      }
+    } else {
+      // Si el input está vacío o no ha cambiado, se usan las coordenadas existentes.
+      if (!searchCoords) {
+        setError('Por favor, proporciona una ubicación.');
+        return;
+      }
+      performSearch();
+    }
   }
 
   useEffect(() => {
@@ -104,27 +131,23 @@ export function SearchForm() {
     }
   }, [selectedBrands, sortBy, selectedDistance, performSearch, hasSearched]);
 
-  const handleBrandSelect = (brand: string) => {
-    setSelectedBrands(prev =>
-      prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
-    );
-  };
+  useEffect(() => {
+    if (searchCoords && hasSearched) {
+      performSearch();
+    }
+  }, [searchCoords, hasSearched, performSearch]);
 
-  const removeSelectedBrand = (brand: string) => {
-    setSelectedBrands(prev => prev.filter(b => b !== brand));
-  }
+  useEffect(() => {
+    if (hasSearched) {
+      performSearch();
+    }
+  }, [selectedBrands, sortBy, selectedDistance, hasSearched, performSearch]);
 
-  const displayedStations = useMemo(() => {
-    return allStations.slice(0, currentPage * STATIONS_PER_PAGE);
-  }, [allStations, currentPage]);
-
-  const hasMoreStations = useMemo(() => {
-    return allStations.length > displayedStations.length;
-  }, [allStations, displayedStations]);
-
-  const handleLoadMore = () => {
-    setCurrentPage(prev => prev + 1);
-  }
+  const handleBrandSelect = (brand: string) => setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
+  const removeSelectedBrand = (brand: string) => setSelectedBrands(prev => prev.filter(b => b !== brand));
+  const displayedStations = useMemo(() => allStations.slice(0, currentPage * STATIONS_PER_PAGE), [allStations, currentPage]);
+  const hasMoreStations = useMemo(() => allStations.length > displayedStations.length, [allStations, displayedStations]);
+  const handleLoadMore = () => setCurrentPage(prev => prev + 1);
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -140,7 +163,7 @@ export function SearchForm() {
                 id="address"
                 placeholder="Pulsa el icono"
                 value={address}
-                readOnly
+                onChange={(e) => setAddress(e.target.value)}
                 className="w-full bg-gray-50 h-10 cursor-default rounded-r-none border-r-0  text-base font-medium placeholder:text-base 
                 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input"
               />
@@ -226,71 +249,76 @@ export function SearchForm() {
         )}
 
         <div className="flex justify-center pt-4">
-          <Button type="button" onClick={handleSearchClick} disabled={isLoading || isLocating || !userCoords || !selectedProduct} className="bg-emerald-500 w-full sm:w-auto px-8 py-2 hover:bg-emerald-600 text-white font-medium" size="lg">
-            {isLoading ? "Buscando..." : "Buscar Gasolineras"}
+          <Button type="button"
+            onClick={handleSearchClick}
+            disabled={isLoading || isLocating || !selectedProduct}
+            className="bg-emerald-500 w-full sm:w-auto px-8 py-2 hover:bg-emerald-600 text-white font-medium" size="lg">
+            {isLoading || isLocating ? "Buscando..." : "Buscar Gasolineras"}
           </Button>
         </div>
       </div>
 
-      {error && (
+      {error &&
         <Alert variant="destructive" className="bg-red-50 border-red-200 mt-6">
-          <AlertDescription className="text-red-800">{error}</AlertDescription>
+          <AlertDescription className="text-red-800">{error}
+          </AlertDescription>
         </Alert>
+      }
+
+      {/* --- SECCIÓN DE MAPA (debajo del botón de búsqueda) --- */}
+      {hasSearched && !isLoading && allStations.length > 0 && (
+        <div className="pt-4">
+          <Suspense fallback={<div className="h-[400px] w-full bg-gray-200 rounded-md animate-pulse"></div>}>
+            {searchCoords && (
+              <MapDisplay
+                stations={allStations}
+                center={searchCoords}
+                hoveredStationId={hoveredStationId}
+              />
+            )}
+          </Suspense>
+        </div>
       )}
 
+      {/* --- SECCIÓN DE LISTA DE RESULTADOS (debajo del mapa) --- */}
       {hasSearched && !isLoading && (
         <div className="space-y-6 pt-4">
-          <div className="flex flex-col md:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-            <h3 className="text-xl font-bold text-gray-800 shrink-0">Gasolineras Encontradas</h3>
-            <div className="grid grid-cols-2 sm:flex items-stretch sm:items-center gap-2 w-full sm:w-auto">
-              <Select value={String(selectedDistance)} onValueChange={(value) => setSelectedDistance(Number(value))}>
-                <SelectTrigger className="bg-white h-10 sm:h-11 w-full text-xs sm:text-base">
-                  <div className="flex items-center gap-1">
-                    <Route className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <SelectValue />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {DISTANCE_OPTIONS.map((dist) => (
-                    <SelectItem key={dist} value={String(dist)} className="text-sm sm:text-base">
-                      {dist} km
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortByType)}>
-                <SelectTrigger className="bg-white h-10 sm:h-11 w-full text-xs sm:text-base">
-                  <div className="flex items-center gap-1">
-                    <SelectValue placeholder="Ordenar por..." />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="price" className="text-sm sm:text-base">
-                    <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 inline-block" />
-                    Precio
-                  </SelectItem>
-                  <SelectItem value="distance" className="text-sm sm:text-base">
-                    <Route className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 inline-block" />
-                    Distancia
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <GasStationList stations={displayedStations} isLoading={isLoading} />
-
-          {hasMoreStations && (
-            <div className="text-center">
-              <Button onClick={handleLoadMore} variant="outline" className="bg-white">
-                Cargar más estaciones
-              </Button>
-            </div>
+          {allStations.length > 0 && (
+            <>
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                <h3 className="text-xl font-bold text-gray-800 shrink-0">Gasolineras Encontradas</h3>
+                <div className="flex items-center justify-center md:justify-end gap-2 w-full md:w-auto">
+                  <Select value={String(selectedDistance)} onValueChange={(value) => setSelectedDistance(Number(value))}>
+                    <SelectTrigger className="w-[120px] bg-white h-11"><div className="flex items-center gap-1 justify-center"><Route className="h-4 w-4" /><SelectValue /></div></SelectTrigger>
+                    <SelectContent className="bg-white">{DISTANCE_OPTIONS.map((dist) => <SelectItem key={dist} value={String(dist)}>{dist} km</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortByType)}>
+                    <SelectTrigger className="w-[150px] bg-white h-11"><div className="flex items-center gap-1 justify-center"><SelectValue placeholder="Ordenar por..." /></div></SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="price"><div className="flex items-center gap-1.5"><DollarSign className="h-4 w-4" />Precio</div></SelectItem>
+                      <SelectItem value="distance"><div className="flex items-center gap-1.5"><Route className="h-4 w-4" />Distancia</div></SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <GasStationList
+                stations={displayedStations}
+                isLoading={isLoading}
+                onStationHover={setHoveredStationId}
+              />
+              {hasMoreStations && (
+                <div className="text-center">
+                  <Button onClick={handleLoadMore} variant="outline" className="bg-white">
+                    Cargar más estaciones
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
 
-      {isLoading && <GasStationList stations={[]} isLoading={true} />}
+      {isLoading && <GasStationList stations={[]} isLoading={true} onStationHover={() => { }} />}
     </div>
   )
 }

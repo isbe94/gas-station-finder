@@ -22,7 +22,6 @@ export async function getCoordinatesFromAddress(address: string) {
   };
 }
 
-// utils/geocode.ts
 export const getCurrentLocation = (): Promise<{ lat: number; lng: number }> => {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -59,7 +58,7 @@ export async function getAddressFromCoords(lat: number, lng: number): Promise<{ 
   try {
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "GasFinderApp/1.0 (your-email@example.com)", // Es buena práctica enviar un User-Agent
+        "User-Agent": "GasFinderApp/1.0 (your-email@example.com)", 
       },
     });
 
@@ -71,10 +70,9 @@ export async function getAddressFromCoords(lat: number, lng: number): Promise<{ 
 
     if (data && data.address) {
       const { road, house_number, postcode } = data.address;
-      // Construimos la dirección de la forma más completa posible
       const street = road || "";
       const number = house_number || "";
-      const finalAddress = `${street}, ${number}`.replace(/^, |^,|, $/g, ''); // Limpia comas sobrantes
+      const finalAddress = `${street}, ${number}`.replace(/^, |^,|, $/g, '');
 
       return {
         address: finalAddress || data.display_name, // Si no hay calle, usa el nombre completo
