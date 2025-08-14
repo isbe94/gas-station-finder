@@ -16,9 +16,10 @@ const MapDisplay = lazy(() => import('@/components/MapDisplay').then(module => (
 const STATIONS_PER_PAGE = 6;
 const PREDEFINED_BRANDS = ['Repsol', 'Plenergy', 'Ballenoil', 'Petroprix'];
 const DISTANCE_OPTIONS = [10, 20, 30, 40, 50];
+const DEFAULT_CENTER: Coordinates = { lat: 40.416775, lng: -3.703790 };
 
 export function SearchForm() {
-  const [searchCoords, setsearchCoords] = useState<Coordinates | null>(null) // Coordenadas finales para la búsqueda
+  const [searchCoords, setSearchCoords] = useState<Coordinates | null>(DEFAULT_CENTER) // Coordenadas finales para la búsqueda
   const [locatedAddress, setLocatedAddress] = useState(""); // Almacena la dirección de la geolocalización
   const [address, setAddress] = useState("")
   const [hoveredStationId, setHoveredStationId] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export function SearchForm() {
     setError(null);
     try {
       const coords = await getCurrentLocation();
-      setsearchCoords(coords);
+      setSearchCoords(coords);
       const locatedAddr = await reverseGeocode(coords.lat, coords.lng);
       setAddress(locatedAddr);
       setLocatedAddress(locatedAddr); // Guarda la dirección original de la geolocalización
@@ -104,7 +105,7 @@ export function SearchForm() {
       try {
         const coords = await getCoordinatesFromAddress(address);
         if (coords) {
-          setsearchCoords(coords); // Esto disparará el useEffect que llama a performSearch
+          setSearchCoords(coords); // Esto disparará el useEffect que llama a performSearch
         } else {
           setError('No se encontraron coordenadas para la dirección introducida.');
           setIsLoading(false);
@@ -148,6 +149,22 @@ export function SearchForm() {
   const displayedStations = useMemo(() => allStations.slice(0, currentPage * STATIONS_PER_PAGE), [allStations, currentPage]);
   const hasMoreStations = useMemo(() => allStations.length > displayedStations.length, [allStations, displayedStations]);
   const handleLoadMore = () => setCurrentPage(prev => prev + 1);
+
+  const handleMapClick = useCallback(async (coords: Coordinates) => {
+    setIsLocating(true); // Reutilizamos el estado de carga para feedback visual
+    setError(null);
+    try {
+      setSearchCoords(coords);
+      const clickedAddress = await reverseGeocode(coords.lat, coords.lng);
+      setAddress(clickedAddress);
+      setLocatedAddress(clickedAddress); // Actualizamos ambas direcciones
+    } catch (err) {
+      console.error(err)
+      setError("No se pudo obtener la dirección para el punto seleccionado.");
+    } finally {
+      setIsLocating(false);
+    }
+  }, []);
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -193,7 +210,7 @@ export function SearchForm() {
               <SelectTrigger id="product" className="w-full bg-white h-11 px-3 py-2">
                 <SelectValue placeholder="Selecciona tipo" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent className="bg-white z-[1001]">
                 {products.map((p) => (
                   <SelectItem key={p.IDProducto} value={p.IDProducto}>
                     {p.NombreProducto}
@@ -211,7 +228,7 @@ export function SearchForm() {
               <SelectTrigger id="brands" className="w-full bg-white h-11 px-3 py-2">
                 <SelectValue placeholder="Selecciona marca" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent className="bg-white z-[1001]">
                 {brands.map((brand) => (
                   <SelectItem key={brand} value={brand} disabled={selectedBrands.includes(brand)}>
                     {brand}
@@ -248,6 +265,20 @@ export function SearchForm() {
           </div>
         )}
 
+        {/* --- SECCIÓN DE MAPA (debajo del botón de búsqueda) --- */}
+        <div className="pt-4">
+          <Suspense fallback={<div className="h-[400px] w-full bg-gray-200 rounded-md animate-pulse"></div>}>
+            {searchCoords && (
+              <MapDisplay
+                stations={allStations}
+                center={searchCoords}
+                hoveredStationId={hoveredStationId}
+                onMapClick={handleMapClick}
+              />
+            )}
+          </Suspense>
+        </div>
+
         <div className="flex justify-center pt-4">
           <Button type="button"
             onClick={handleSearchClick}
@@ -264,21 +295,6 @@ export function SearchForm() {
           </AlertDescription>
         </Alert>
       }
-
-      {/* --- SECCIÓN DE MAPA (debajo del botón de búsqueda) --- */}
-      {hasSearched && !isLoading && allStations.length > 0 && (
-        <div className="pt-4">
-          <Suspense fallback={<div className="h-[400px] w-full bg-gray-200 rounded-md animate-pulse"></div>}>
-            {searchCoords && (
-              <MapDisplay
-                stations={allStations}
-                center={searchCoords}
-                hoveredStationId={hoveredStationId}
-              />
-            )}
-          </Suspense>
-        </div>
-      )}
 
       {/* --- SECCIÓN DE LISTA DE RESULTADOS (debajo del mapa) --- */}
       {hasSearched && !isLoading && (

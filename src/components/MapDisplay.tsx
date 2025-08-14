@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import type { ApiGasStationWithDistance, Coordinates } from '@/types';
 import { useEffect, useRef } from 'react';
 import L, { Marker as LeafletMarker } from 'leaflet';
@@ -29,8 +29,19 @@ const userLocationIcon = new L.Icon({
 function ChangeMapView({ coords }: { coords: [number, number] }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(coords, map.getZoom());
+    map.flyTo(coords, 13); // flyTo para una transición suave
   }, [coords, map]);
+  return null;
+}
+
+// Maneja loc clics en el mapa
+function MapClickHandler({ onMapClick }: { onMapClick: (coords: Coordinates) => void }) {
+  useMapEvents({
+    click(e) {
+      // Cuando se hace clic, llamamos a la función del padre con las nuevas coordenadas
+      onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
   return null;
 }
 
@@ -39,6 +50,7 @@ interface MapDisplayProps {
   center: Coordinates;
   zoom?: number;
   hoveredStationId: string | null;
+  onMapClick: (coords: Coordinates) => void;
 }
 
 function MapMarkersLogic({ stations, hoveredStationId }: { stations: ApiGasStationWithDistance[], hoveredStationId: string | null }) {
@@ -50,14 +62,11 @@ function MapMarkersLogic({ stations, hoveredStationId }: { stations: ApiGasStati
     if (hoveredStationId) {
       const markerRef = markerRefs.current[hoveredStationId];
       if (markerRef) {
+        // Abrimos el popup del marcador correspondiente y centramos el mapa
         markerRef.openPopup();
         map.panTo(markerRef.getLatLng());
       }
     }
-    // else {
-    //   // Si no hay ninguna estación con hover, cerramos cualquier popup que esté abierto.
-    //   map.closePopup();
-    // }
   }, [hoveredStationId, map]);
 
   return (
@@ -77,6 +86,9 @@ function MapMarkersLogic({ stations, hoveredStationId }: { stations: ApiGasStati
             icon={defaultIcon}
             ref={(ref) => { if (ref) markerRefs.current[station.IDEESS] = ref; }}
             eventHandlers={{
+              click: () => {
+                window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+              },
               mouseover: (event) => event.target.openPopup(),
               mouseout: (event) => event.target.closePopup(),
             }}
@@ -95,7 +107,7 @@ function MapMarkersLogic({ stations, hoveredStationId }: { stations: ApiGasStati
   );
 }
 
-export function MapDisplay({ stations, center, zoom = 13, hoveredStationId }: MapDisplayProps) {
+export function MapDisplay({ stations, center, zoom = 13, hoveredStationId, onMapClick }: MapDisplayProps) {
   const mapCenter: [number, number] = [center.lat, center.lng];
 
   return (
@@ -116,6 +128,7 @@ export function MapDisplay({ stations, center, zoom = 13, hoveredStationId }: Ma
         * El .map() duplicado ha sido eliminado de aquí.
       */}
       <MapMarkersLogic stations={stations} hoveredStationId={hoveredStationId} />
+      <MapClickHandler onMapClick={onMapClick} />
     </MapContainer>
   );
 }
