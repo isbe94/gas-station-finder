@@ -22,7 +22,9 @@ export function SearchForm() {
   const [searchCoords, setSearchCoords] = useState<Coordinates | null>(DEFAULT_CENTER) // Coordenadas finales para la búsqueda
   const [locatedAddress, setLocatedAddress] = useState(""); // Almacena la dirección de la geolocalización
   const [address, setAddress] = useState("")
+
   const [hoveredStationId, setHoveredStationId] = useState<string | null>(null);
+  const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
 
   const [products, setProducts] = useState<ApiPetroleumProduct[]>([])
   const [selectedProduct, setSelectedProduct] = useState<string>("")
@@ -98,6 +100,8 @@ export function SearchForm() {
     setHasSearched(true);
     setCurrentPage(1);
     setAllStations([]);
+    setSelectedStationId(null);
+    setHoveredStationId(null);
     setError(null);
 
     if (address && address !== locatedAddress) {
@@ -166,6 +170,10 @@ export function SearchForm() {
     }
   }, []);
 
+  const handleStationClick = (stationId: string) => {
+    setSelectedStationId(stationId);
+  };
+
   const handleClear = () => {
     // Resetea los campos del formulario
     setAddress("");
@@ -185,6 +193,7 @@ export function SearchForm() {
     setCurrentPage(1);
     setHasSearched(false);
     setError(null);
+    setSelectedStationId(null);
     setHoveredStationId(null);
   };
 
@@ -287,7 +296,7 @@ export function SearchForm() {
           </div>
         )}
 
-        {/* --- SECCIÓN DE MAPA --- */}
+        {/* --- Mapa --- */}
         <div className="pt-4">
           <Suspense fallback={<div className="h-[400px] w-full bg-gray-200 rounded-md animate-pulse"></div>}>
             {searchCoords && (
@@ -295,31 +304,40 @@ export function SearchForm() {
                 stations={allStations}
                 center={searchCoords}
                 hoveredStationId={hoveredStationId}
+                selectedStationId={selectedStationId}
                 onMapClick={handleMapClick}
+                onMarkerHover={setHoveredStationId}
+                onStationClick={handleStationClick}
               />
             )}
           </Suspense>
         </div>
 
         <div className="flex justify-center items-center gap-4 pt-4">
-          {hasSearched && (
+          {!hasSearched ? (
+            <Button
+              type="button"
+              onClick={handleSearchClick}
+              disabled={isLoading || isLocating || !selectedProduct}
+              className="bg-emerald-500 w-full sm:w-auto px-8 py-2 hover:bg-emerald-600 text-white font-medium"
+              size="lg"
+            >
+              {isLoading || isLocating ? "Buscando..." : "Buscar Gasolineras"}
+            </Button>
+          ) : (
+            // Si la búsqueda SÍ se ha hecho, muestra el botón de Limpiar
             <Button
               type="button"
               onClick={handleClear}
-              variant="ghost"
-              className="flex items-center gap-2"
+              variant="outline"
+              className="bg-white w-full sm:w-auto px-8 py-2 text-gray-700 border-gray-300 hover:bg-gray-50 flex items-center gap-2"
+              size="lg"
               aria-label="Limpiar búsqueda"
             >
               <RotateCcw className="h-4 w-4" />
-              Limpiar
+              Nueva Búsqueda
             </Button>
           )}
-          <Button type="button"
-            onClick={handleSearchClick}
-            disabled={isLoading || isLocating || !selectedProduct}
-            className="bg-emerald-500 w-full sm:w-auto px-8 py-2 hover:bg-emerald-600 text-white font-medium" size="lg">
-            {isLoading || isLocating ? "Buscando..." : "Buscar Gasolineras"}
-          </Button>
         </div>
       </div>
 
@@ -330,23 +348,25 @@ export function SearchForm() {
         </Alert>
       }
 
-      {/* --- SECCIÓN DE LISTA DE RESULTADOS (debajo del mapa) --- */}
       {hasSearched && !isLoading && (
         <div className="space-y-6 pt-4">
           {allStations.length > 0 && (
             <>
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="flex flex-col md:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
                 <h3 className="text-xl font-bold text-gray-800 shrink-0">Gasolineras Encontradas</h3>
-                <div className="flex items-center justify-center md:justify-end gap-2 w-full md:w-auto">
+                <div className="grid grid-cols-2 sm:flex items-stretch sm:items-center gap-2 w-full sm:w-auto">
                   <Select value={String(selectedDistance)} onValueChange={(value) => setSelectedDistance(Number(value))}>
-                    <SelectTrigger className="w-[120px] bg-white h-11"><div className="flex items-center gap-1 justify-center"><Route className="h-4 w-4" /><SelectValue /></div></SelectTrigger>
-                    <SelectContent className="bg-white">{DISTANCE_OPTIONS.map((dist) => <SelectItem key={dist} value={String(dist)}>{dist} km</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="bg-white h-10 sm:h-11 w-full text-xs sm:text-base"><div className="flex items-center gap-1"><Route className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" /><SelectValue /></div></SelectTrigger>
+                    <SelectContent className="bg-white">{DISTANCE_OPTIONS.map((dist) => <SelectItem key={dist} value={String(dist)} className="text-sm sm:text-base">{dist} km</SelectItem>)}</SelectContent>
                   </Select>
                   <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortByType)}>
-                    <SelectTrigger className="w-[150px] bg-white h-11"><div className="flex items-center gap-1 justify-center"><SelectValue placeholder="Ordenar por..." /></div></SelectTrigger>
+                    <SelectTrigger className="bg-white h-10 sm:h-11 w-full text-xs sm:text-base"><div className="flex items-center gap-1"><SelectValue placeholder="Ordenar por..." /></div></SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="price"><div className="flex items-center gap-1.5"><DollarSign className="h-4 w-4" />Precio</div></SelectItem>
-                      <SelectItem value="distance"><div className="flex items-center gap-1.5"><Route className="h-4 w-4" />Distancia</div></SelectItem>
+                      <SelectItem value="price" className="text-sm sm:text-base"><DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 inline-block" />Precio</SelectItem>
+                      <SelectItem value="distance" className="text-sm sm:text-base">
+                        <Route className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 inline-block" />
+                        Distancia
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -355,6 +375,7 @@ export function SearchForm() {
                 stations={displayedStations}
                 isLoading={isLoading}
                 onStationHover={setHoveredStationId}
+                onStationClick={handleStationClick}
               />
               {hasMoreStations && (
                 <div className="text-center">
@@ -368,7 +389,7 @@ export function SearchForm() {
         </div>
       )}
 
-      {isLoading && <GasStationList stations={[]} isLoading={true} onStationHover={() => { }} />}
+      {isLoading && <GasStationList stations={[]} isLoading={true} onStationHover={() => { }} onStationClick={() => { }} />}
     </div>
   )
 }

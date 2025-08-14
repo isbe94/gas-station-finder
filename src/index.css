@@ -173,3 +173,41 @@ button:focus-visible {
     color: var(--color-foreground);
   }
 }
+
+/* Estilos para el marcador de precio personalizado en el mapa */
+.price-marker {
+  background-color: white;
+  border: 2px solid #10b981;
+  /* Verde esmeralda para coincidir con el botón */
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-weight: 700;
+  /* bold */
+  font-size: 14px;
+  color: #064e3b;
+  /* Verde oscuro */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  white-space: nowrap;
+  /* Evita que el texto se parta en dos líneas */
+}
+
+/* El pequeño triángulo que apunta hacia abajo, simulando un pin */
+.price-marker::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  /* Lo posiciona justo debajo de la caja */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #10b981;
+  /* Mismo color que el borde */
+}
+
+/* .leaflet-popup-tip-container {
+  display: none !important;
+} */

@@ -1,5 +1,4 @@
 import type { ApiGasStationWithDistance } from "@/types"
-import { createGoogleMapsUrl } from "@/utils/maps"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock, MapPin, Tag } from "lucide-react"
@@ -7,28 +6,21 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 interface GasStationCardProps {
     station: ApiGasStationWithDistance;
-    onMouseEnter: (id: string) => void;
-    onMouseLeave: () => void;
+    onClick: (id: string) => void;
+    onHover?: () => void;
+    onLeave?: () => void;
 }
 
-export function GasStationCard({ station, onMouseEnter, onMouseLeave }: GasStationCardProps) {
+export function GasStationCard({ station, onClick }: GasStationCardProps) {
     const formatPrice = (price: string) => {
         const numericPrice = Number.parseFloat(price.replace(",", "."))
         return isNaN(numericPrice) ? "No disponible" : `${numericPrice.toFixed(3)} €/L`
     }
 
-    const mapsUrl = createGoogleMapsUrl(station);
-
-    const handleClick = () => {
-        window.open(mapsUrl, '_blank', 'noopener,noreferrer');
-    }
-
     return (
         <div
             className="block h-full cursor-pointer"
-            onClick={handleClick}
-            onMouseEnter={() => onMouseEnter(station.IDEESS)}
-            onMouseLeave={onMouseLeave}>
+            onClick={() => onClick(station.IDEESS)}>
             <Card className="h-full flex flex-col justify-between hover:shadow-lg transition-all duration-200 hover:-translate-y-1 bg-white border border-gray-200 text-black">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base md:text-lg font-bold">

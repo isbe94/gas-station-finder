@@ -8,10 +8,12 @@ interface ApiGasStationWithDistance extends ApiGasStation {
 interface GasStationListProps {
   stations: ApiGasStationWithDistance[];
   isLoading: boolean;
-  onStationHover: (id: string | null) => void; // para funciones de hover del mapa
+  onStationClick: (stationId: string) => void;
+  onStationHover: (stationId: string | null) => void;
+
 }
 
-export function GasStationList({ stations, isLoading, onStationHover }: GasStationListProps) {
+export function GasStationList({ stations, isLoading, onStationClick, onStationHover }: GasStationListProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -38,8 +40,9 @@ export function GasStationList({ stations, isLoading, onStationHover }: GasStati
           <GasStationCard
             key={station.IDEESS}
             station={station}
-            onMouseEnter={() => onStationHover(station.IDEESS)}
-            onMouseLeave={() => onStationHover(null)}
+            onClick={() => onStationClick(station.IDEESS)}
+            onHover={() => onStationHover(station.IDEESS)}
+            onLeave={() => onStationHover(null)}
           />
         ))}
       </div>
