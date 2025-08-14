@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { GasStationList } from "./GasStationList"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { MapPin, DollarSign, Route, X } from "lucide-react"
+import { MapPin, DollarSign, Route, X, RotateCcw } from "lucide-react"
 
 const MapDisplay = lazy(() => import('@/components/MapDisplay').then(module => ({ default: module.MapDisplay })));
 
@@ -166,6 +166,28 @@ export function SearchForm() {
     }
   }, []);
 
+  const handleClear = () => {
+    // Resetea los campos del formulario
+    setAddress("");
+    setLocatedAddress("");
+    setSelectedProduct("");
+    setSelectedBrands([]);
+
+    // Resetea los filtros de resultados
+    setSelectedDistance(30);
+    setSortBy('price');
+
+    // Resetea el mapa a la vista por defecto
+    setSearchCoords(DEFAULT_CENTER);
+
+    // Limpia los resultados y el estado de la búsqueda
+    setAllStations([]);
+    setCurrentPage(1);
+    setHasSearched(false);
+    setError(null);
+    setHoveredStationId(null);
+  };
+
   return (
     <div className="space-y-6 md:space-y-8">
       <div className="space-y-2">
@@ -265,7 +287,7 @@ export function SearchForm() {
           </div>
         )}
 
-        {/* --- SECCIÓN DE MAPA (debajo del botón de búsqueda) --- */}
+        {/* --- SECCIÓN DE MAPA --- */}
         <div className="pt-4">
           <Suspense fallback={<div className="h-[400px] w-full bg-gray-200 rounded-md animate-pulse"></div>}>
             {searchCoords && (
@@ -279,7 +301,19 @@ export function SearchForm() {
           </Suspense>
         </div>
 
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center items-center gap-4 pt-4">
+          {hasSearched && (
+            <Button
+              type="button"
+              onClick={handleClear}
+              variant="ghost"
+              className="flex items-center gap-2"
+              aria-label="Limpiar búsqueda"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Limpiar
+            </Button>
+          )}
           <Button type="button"
             onClick={handleSearchClick}
             disabled={isLoading || isLocating || !selectedProduct}
