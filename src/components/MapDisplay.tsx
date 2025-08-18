@@ -1,10 +1,10 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import type { ApiGasStationWithDistance, Coordinates } from '@/types';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import L from 'leaflet';
 import { createGoogleMapsUrl } from '@/utils/maps';
 
-// Icono verde para ubicación
+// Icono azul para ubicación
 const userLocationIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -13,15 +13,6 @@ const userLocationIcon = new L.Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
-
-// Recentra el mapa cuando cambian las coordenadas
-// function ChangeMapView({ coords }: { coords: [number, number] }) {
-//   const map = useMap();
-//   useEffect(() => {
-//     map.flyTo(coords, 13);
-//   }, [coords, map]);
-//   return null;
-// }
 
 // Maneja clics en el mapa
 function MapClickHandler({ onMapClick }: { onMapClick: (coords: Coordinates) => void }) {
@@ -37,29 +28,42 @@ function MapController({ center, station }: { center: [number, number], station:
   const map = useMap();
 
   useEffect(() => {
-    // Si hay una estación seleccionada, vuela hacia ella.
+    // Se obtiene el centro actual del mapa y su nivel de zoom
+    const mapCenter = map.getCenter();
+    const mapZoom = map.getZoom();
+
+    // Lógica para volar a la estación seleccionada
     if (station) {
       const lat = parseFloat(station['Latitud'].replace(',', '.'));
       const lon = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
 
       if (!isNaN(lat) && !isNaN(lon)) {
-        map.flyTo([lat, lon], 15, { duration: 1.0 });
+        // Se mueve si la estación no es ya el centro del mapa
+        if (mapCenter.lat !== lat || mapCenter.lng !== lon) {
+          map.flyTo([lat, lon], 15, { duration: 1.0 });
+        }
 
-        // Abrimos el popup programáticamente
-        L.popup()
+        const popupContent = `<b>${station['Rótulo']}</b><br/>${station['Dirección']}<br/>Horario: ${station.Horario}`;
+        L.popup({ offset: [0, -25] })
           .setLatLng([lat, lon])
-          .setContent(`
-            <b>${station['Rótulo']}</b><br/>
-            ${station['Dirección']}<br/>
-            Horario: ${station.Horario}
-          `)
+          .setContent(popupContent)
           .openOn(map);
       }
-    } else {
-      // Si NO hay estación seleccionada, vuela al centro de búsqueda.
-      map.flyTo(center, 13);
     }
-  }, [center, station, map]); // Se ejecuta si cambia el centro, la estación o el mapa
+    // Lógica para centrarse en la ubicación de búsqueda
+    else {
+      const targetCoords = L.latLng(center[0], center[1]);
+
+      // Compara si el destino (centro de búsqueda) es prácticamente el mismo que el centro actual del mapa.
+      // Usa una pequeña tolerancia (0.0001) porque las coordenadas de punto flotante pueden no ser exactas.
+      const isAlreadyCentered = mapCenter.distanceTo(targetCoords) < 1; // 1 metro de tolerancia
+
+      // Si el mapa NO está ya centrado en la ubicación de búsqueda, se mueve.
+      if (!isAlreadyCentered || mapZoom !== 13) {
+        map.flyTo(center, 13);
+      }
+    }
+  }, [center, station, map]);
 
   return null;
 }
@@ -86,7 +90,11 @@ export function MapDisplay({
   onMarkerHover,
   onStationClick
 }: MapDisplayProps) {
-  const mapCenter: [number, number] = [center.lat, center.lng];
+
+  const mapCenter: [number, number] = useMemo(
+    () => [center.lat, center.lng],
+    [center.lat, center.lng]
+  );
 
   const hoveredStation = hoveredStationId
     ? stations.find(s => s.IDEESS === hoveredStationId) ?? null
@@ -153,6 +161,8 @@ export function MapDisplay({
             parseFloat(hoveredStation['Longitud (WGS84)'].replace(',', '.'))
           ]}
           offset={[0, -25]}
+          // Desactiva el auto-paneo. Esto es CRUCIAL para evitar que el mapa se mueva y cause el temblor.
+          autoPan={false}
         >
           <a
             href={createGoogleMapsUrl(hoveredStation)}
