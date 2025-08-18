@@ -15,13 +15,13 @@ const userLocationIcon = new L.Icon({
 });
 
 // Recentra el mapa cuando cambian las coordenadas
-function ChangeMapView({ coords }: { coords: [number, number] }) {
-  const map = useMap();
-  useEffect(() => {
-    map.flyTo(coords, 13);
-  }, [coords, map]);
-  return null;
-}
+// function ChangeMapView({ coords }: { coords: [number, number] }) {
+//   const map = useMap();
+//   useEffect(() => {
+//     map.flyTo(coords, 13);
+//   }, [coords, map]);
+//   return null;
+// }
 
 // Maneja clics en el mapa
 function MapClickHandler({ onMapClick }: { onMapClick: (coords: Coordinates) => void }) {
@@ -33,28 +33,33 @@ function MapClickHandler({ onMapClick }: { onMapClick: (coords: Coordinates) => 
   return null;
 }
 
-// Mueve el mapa y abrir popup de la estación seleccionada
-function FlyToSelectedStation({ selectedStation }: { selectedStation: ApiGasStationWithDistance | null }) {
+function MapController({ center, station }: { center: [number, number], station: ApiGasStationWithDistance | null }) {
   const map = useMap();
 
   useEffect(() => {
-    if (selectedStation) {
-      const lat = parseFloat(selectedStation['Latitud'].replace(',', '.'));
-      const lon = parseFloat(selectedStation['Longitud (WGS84)'].replace(',', '.'));
+    // Si hay una estación seleccionada, vuela hacia ella.
+    if (station) {
+      const lat = parseFloat(station['Latitud'].replace(',', '.'));
+      const lon = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
 
       if (!isNaN(lat) && !isNaN(lon)) {
         map.flyTo([lat, lon], 15, { duration: 1.0 });
 
-        const marker = L.marker([lat, lon])
-          .bindPopup(`
-            <b>${selectedStation['Rótulo']}</b><br/>
-            ${selectedStation['Dirección']}<br/>
-            Horario: ${selectedStation.Horario}
-          `);
-        marker.openPopup();
+        // Abrimos el popup programáticamente
+        L.popup()
+          .setLatLng([lat, lon])
+          .setContent(`
+            <b>${station['Rótulo']}</b><br/>
+            ${station['Dirección']}<br/>
+            Horario: ${station.Horario}
+          `)
+          .openOn(map);
       }
+    } else {
+      // Si NO hay estación seleccionada, vuela al centro de búsqueda.
+      map.flyTo(center, 13);
     }
-  }, [selectedStation, map]);
+  }, [center, station, map]); // Se ejecuta si cambia el centro, la estación o el mapa
 
   return null;
 }
@@ -103,8 +108,7 @@ export function MapDisplay({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      <ChangeMapView coords={mapCenter} />
-      <FlyToSelectedStation selectedStation={selectedStation} />
+      <MapController center={mapCenter} station={selectedStation} />
 
       <Marker position={mapCenter} icon={userLocationIcon}>
         <Popup>Ubicación de búsqueda</Popup>
